@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Run Titler</title>
+  <style>
+    :root {
+      --bg:      #f2f2f7;
+      --card:    #ffffff;
+      --primary: #e85d04;
+      --success: #22c55e;
+      --danger:  #dc2626;
+      --text:    #111827;
+      --muted:   #6b7280;
+      --border:  #e5e7eb;
+      --radius:  14px;
+      --shadow:  0 2px 14px rgba(0,0,0,0.07);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Password overlay ──────────────────────────────────────────── */
+    #pw-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      padding: 24px;
+    }
+    #pw-overlay.hidden { display: none; }
+
+    .pw-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 36px 28px;
+      width: 100%;
+      max-width: 360px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .pw-card .icon { font-size: 2.5rem; margin-bottom: 14px; }
+    .pw-card h2   { font-size: 1.4rem; margin-bottom: 6px; }
+    .pw-card p    { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+
+    /* ── Layout ────────────────────────────────────────────────────── */
+    main {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    header h1   { font-size: 1.5rem; font-weight: 700; }
+    header p    { color: var(--muted); font-size: 0.9rem; margin-top: 4px; }
+
+    /* ── Cards ─────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 22px 20px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
+
+    /* ── Form fields ────────────────────────────────────────────────── */
+    .field        { margin-bottom: 16px; }
+    .field:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 11px 13px;
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      font-size: 1rem;
+      font-family: inherit;
+      color: var(--text);
+      background: #fff;
+      -webkit-appearance: none;
+      appearance: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+
+    /* Custom select arrow */
+    select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%236b7280' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 13px center;
+      padding-right: 36px;
+    }
+
+    .row-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .pace-hint {
+      font-size: 0.8rem;
+      color: var(--primary);
+      font-weight: 600;
+      min-height: 1.2em;
+      margin-bottom: 6px;
+    }
+
+    /* ── Buttons ────────────────────────────────────────────────────── */
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 9px;
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      text-align: center;
+    }
+    .btn:active:not(:disabled) { transform: scale(0.98); }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:disabled { opacity: 0.5; cursor: default; }
+
+    .btn-secondary {
+      background: var(--border);
+      color: var(--text);
+      margin-top: 4px;
+    }
+
+    /* ── Result title cards ─────────────────────────────────────────── */
+    #results { display: flex; flex-direction: column; gap: 12px; }
+
+    .title-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      animation: slideIn 0.22s ease-out both;
+    }
+    .title-card:nth-child(2) { animation-delay: 0.07s; }
+    .title-card:nth-child(3) { animation-delay: 0.14s; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .title-text {
+      flex: 1;
+      font-size: 1.05rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+
+    .copy-btn {
+      flex-shrink: 0;
+      padding: 7px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .copy-btn.copied {
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    /* ── Spinner ────────────────────────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 17px;
+      height: 17px;
+      border: 2.5px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.55s linear infinite;
+      vertical-align: middle;
+      margin-right: 7px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error message ──────────────────────────────────────────────── */
+    .error-msg {
+      background: #fee2e2;
+      color: var(--danger);
+      padding: 12px 15px;
+      border-radius: 9px;
+      font-size: 0.9rem;
+      margin-bottom: 14px;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<!-- ── Password overlay ─────────────────────────────────────────────────── -->
+<div id="pw-overlay">
+  <div class="pw-card">
+    <div class="icon">🏃</div>
+    <h2>Run Titler</h2>
+    <p>Enter your access password to continue.</p>
+    <div class="field" style="text-align:left">
+      <label>Password</label>
+      <input type="password" id="pw-input" placeholder="••••••••"
+             autocomplete="current-password" />
+    </div>
+    <div id="pw-error" class="error-msg hidden">Incorrect password — try again.</div>
+    <button class="btn btn-primary" style="margin-top:14px" onclick="submitPassword()">
+      Continue
+    </button>
+  </div>
+</div>
+
+<!-- ── Main UI ──────────────────────────────────────────────────────────── -->
+<main>
+  <header>
+    <h1>🏃 Run Titler</h1>
+    <p>Generate a great name for your run.</p>
+  </header>
+
+  <div class="card">
+    <!-- Distance + time -->
+    <div class="row-2">
+      <div class="field">
+        <label>Distance (km)</label>
+        <input type="number" id="distance" placeholder="8.5" step="0.1" min="0.1"
+               inputmode="decimal" />
+      </div>
+      <div class="field">
+        <label>Time (min)</label>
+        <input type="number" id="time_minutes" placeholder="45" step="1" min="1"
+               inputmode="numeric" />
+      </div>
+    </div>
+
+    <div class="pace-hint" id="pace-hint"></div>
+
+    <!-- Run type + time of day -->
+    <div class="row-2">
+      <div class="field">
+        <label>Run type</label>
+        <select id="run_type">
+          <option value="Easy">Easy</option>
+          <option value="Tempo">Tempo</option>
+          <option value="Long">Long</option>
+          <option value="Intervals">Intervals</option>
+          <option value="Recovery">Recovery</option>
+          <option value="Race">Race</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Time of day</label>
+        <select id="time_of_day">
+          <option value="Morning">Morning</option>
+          <option value="Afternoon">Afternoon</option>
+          <option value="Evening">Evening</option>
+          <option value="Night">Night</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Tone -->
+    <div class="field">
+      <label>Tone</label>
+      <select id="tone">
+        <option value="Fun">Fun</option>
+        <option value="Motivational">Motivational</option>
+        <option value="Minimal">Minimal</option>
+        <option value="Funny">Funny</option>
+      </select>
+    </div>
+
+    <!-- Notes -->
+    <div class="field">
+      <label>Notes <span style="font-weight:400;text-transform:none">(optional)</span></label>
+      <textarea id="notes"
+                placeholder="How did it feel? Any detail you want the title to reflect…"
+                maxlength="200"></textarea>
+    </div>
+
+    <button class="btn btn-primary" id="submit-btn" onclick="getTitles()">
+      Get Titles
+    </button>
+  </div>
+
+  <!-- Error -->
+  <div id="error-container"></div>
+
+  <!-- Results -->
+  <div id="results"></div>
+
+  <!-- Regenerate -->
+  <div id="regen-row" class="hidden" style="margin-top:4px">
+    <button class="btn btn-secondary" onclick="getTitles()">↻ Regenerate</button>
+  </div>
+</main>
+
+<script>
+  const SESSION_KEY = 'runtitler_pw';
+
+  /* ── Password helpers ───────────────────────────────────────────────── */
+  function storedPassword() {
+    return sessionStorage.getItem(SESSION_KEY) || '';
+  }
+
+  async function checkInitialAuth() {
+    const pw = storedPassword();
+    if (pw) {
+      // Already have a stored password — validate silently
+      const ok = await verifyPassword(pw);
+      if (ok) {
+        hideOverlay();
+        return;
+      }
+      sessionStorage.removeItem(SESSION_KEY);
+    }
+    showOverlay();
+  }
+
+  async function verifyPassword(pw) {
+    try {
+      const resp = await fetch('/api/check-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      });
+      return resp.ok;
+    } catch {
+      // Network issue — let them through; the API will reject bad passwords
+      return true;
+    }
+  }
+
+  async function submitPassword() {
+    const pw = document.getElementById('pw-input').value.trim();
+    if (!pw) return;
+    const ok = await verifyPassword(pw);
+    if (!ok) {
+      document.getElementById('pw-error').classList.remove('hidden');
+      document.getElementById('pw-input').select();
+      return;
+    }
+    sessionStorage.setItem(SESSION_KEY, pw);
+    document.getElementById('pw-error').classList.add('hidden');
+    hideOverlay();
+  }
+
+  function showOverlay() {
+    document.getElementById('pw-overlay').classList.remove('hidden');
+    setTimeout(() => document.getElementById('pw-input').focus(), 80);
+  }
+  function hideOverlay() {
+    document.getElementById('pw-overlay').classList.add('hidden');
+  }
+
+  document.getElementById('pw-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitPassword();
+  });
+
+  /* ── Live pace hint ──────────────────────────────────────────────────── */
+  function updatePaceHint() {
+    const dist = parseFloat(document.getElementById('distance').value);
+    const mins = parseFloat(document.getElementById('time_minutes').value);
+    const el   = document.getElementById('pace-hint');
+    if (dist > 0 && mins > 0) {
+      const secPerKm = (mins * 60) / dist;
+      const m = Math.floor(secPerKm / 60);
+      const s = Math.round(secPerKm % 60);
+      el.textContent = `Pace: ${m}:${s.toString().padStart(2, '0')}/km`;
+    } else {
+      el.textContent = '';
+    }
+  }
+  document.getElementById('distance').addEventListener('input', updatePaceHint);
+  document.getElementById('time_minutes').addEventListener('input', updatePaceHint);
+
+  /* ── Auto time-of-day ────────────────────────────────────────────────── */
+  function autoTimeOfDay() {
+    const h   = new Date().getHours();
+    const sel = document.getElementById('time_of_day');
+    if      (h >= 5  && h < 12) sel.value = 'Morning';
+    else if (h >= 12 && h < 17) sel.value = 'Afternoon';
+    else if (h >= 17 && h < 21) sel.value = 'Evening';
+    else                         sel.value = 'Night';
+  }
+
+  /* ── API call ────────────────────────────────────────────────────────── */
+  async function getTitles() {
+    const distVal = document.getElementById('distance').value.trim();
+    const timeVal = document.getElementById('time_minutes').value.trim();
+
+    if (!distVal || !timeVal) {
+      showError('Please enter distance and time.');
+      return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Generating…';
+    clearError();
+    document.getElementById('results').innerHTML = '';
+    document.getElementById('regen-row').classList.add('hidden');
+
+    const payload = {
+      password:     storedPassword(),
+      distance_km:  parseFloat(distVal),
+      time_minutes: parseInt(timeVal, 10),
+      run_type:     document.getElementById('run_type').value,
+      time_of_day:  document.getElementById('time_of_day').value,
+      tone:         document.getElementById('tone').value,
+      notes:        document.getElementById('notes').value.trim(),
+    };
+
+    try {
+      const resp = await fetch('/api/titles', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+
+      if (resp.status === 401) {
+        sessionStorage.removeItem(SESSION_KEY);
+        showOverlay();
+        return;
+      }
+      if (resp.status === 429) {
+        showError('Too many requests — wait a moment and try again.');
+        return;
+      }
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        showError(data.detail || 'Something went wrong. Please try again.');
+        return;
+      }
+
+      const data = await resp.json();
+      renderTitles(data.titles || []);
+
+    } catch {
+      showError('Network error — is the server running?');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Get Titles';
+    }
+  }
+
+  /* ── Render results ──────────────────────────────────────────────────── */
+  function renderTitles(titles) {
+    const container = document.getElementById('results');
+    container.innerHTML = '';
+
+    titles.forEach(title => {
+      const card = document.createElement('div');
+      card.className = 'title-card';
+
+      const span = document.createElement('span');
+      span.className = 'title-text';
+      span.textContent = title;
+
+      const btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.textContent = 'Copy';
+      btn.addEventListener('click', () => copyTitle(btn, title));
+
+      card.append(span, btn);
+      container.appendChild(card);
+    });
+
+    if (titles.length > 0) {
+      document.getElementById('regen-row').classList.remove('hidden');
+    }
+  }
+
+  function copyTitle(btn, title) {
+    navigator.clipboard.writeText(title).then(() => {
+      btn.textContent = '✓ Copied';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2200);
+    });
+  }
+
+  /* ── Helpers ─────────────────────────────────────────────────────────── */
+  function showError(msg) {
+    const el = document.getElementById('error-container');
+    el.innerHTML = `<div class="error-msg">${escHtml(msg)}</div>`;
+  }
+  function clearError() {
+    document.getElementById('error-container').innerHTML = '';
+  }
+  function escHtml(str) {
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  /* ── Init ─────────────────────────────────────────────────────────────── */
+  autoTimeOfDay();
+  checkInitialAuth();
+</script>
+</body>
+</html>
